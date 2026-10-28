@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Link } from 'react-router'
 import { caseRoutes } from './cases'
+import hsMark from './_hs.svg'
 
 type CasePreview = {
     path: string
@@ -32,7 +33,9 @@ export default function Index() {
         setPreview(path)
     }
 
-    return <div className="w-full h-screen md:flex bg-zinc-900 text-zinc-50 select-none! overflow-hidden font-oppo-sans">
+    return <div className="w-full h-screen md:flex bg-zinc-900 text-zinc-50 select-none! overflow-hidden font-oppo-sans relative">
+        {/* 手写标识：目录页左上角，反色后以白线显示，高度 60px */}
+        <img src={hsMark} alt='' aria-hidden='true' className="pointer-events-none absolute left-0 top-0 z-10 h-[60px] w-auto invert" />
         <div id="index" className="md:min-w-1/5 md:max-w-1/4 bg-zinc-900 flex flex-col border-b-4 border-b-zinc-900 h-full">
             <div className="bg-zinc-800  w-full py-5 px-1.5 text-5xl relative md:opacity-0 border-b-4 md:border-b-0 border-b-zinc-500 ">
                 <h1 className="text-right w-full -translate-y-1 -translate-x-1 "><span className="hidden md:inline-block opacity-0">_</span><span className="md:hidden">Feiron's Designs</span></h1>

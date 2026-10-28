@@ -23,7 +23,9 @@ export default function App() {
     useEffect(() => {
         if (!window.location.hash.includes("@preview")) {
             alert("警告：这个设计案例包含的文本和图像内容全部都是AI生成，所提及实体均为虚构，不反映、影射、代表现实，仅供撑起一套设计并让体验有趣一些。\n" +
-                "Warning: The text and images in this design case are entirely AI-generated. All entities mentioned are fictional and do not reflect, allude to, or represent reality; they exist only to support the design and make the experience a little more interesting.")
+                "本设计以最小 1200px 宽度的窗口为基准，窗口更窄时排版会溢出。\n\n" +
+                "Warning: The text and images in this design case are entirely AI-generated. All entities mentioned are fictional and do not reflect, allude to, or represent reality; they exist only to support the design and make the experience a little more interesting.\n" +
+                "This design assumes a window at least 1200px wide; below that width the layout will overflow.")
         }
     }, []);
 
