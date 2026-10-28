@@ -1,0 +1,13 @@
+[build]
+    command = "pnpm build"
+    publish = "dist"
+
+[build.environment]
+    NODE_VERSION = "22"
+
+# SPA 路由回退：/Gazette/art/1 这类客户端路由被直接访问时，返回 index.html
+# （静态文件存在时不会触发这条重写，assets、fonts、sw.js 不受影响）
+[[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200
