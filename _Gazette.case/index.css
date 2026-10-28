@@ -1,0 +1,79 @@
+/*
+ * Gazette 案例的主题与其他设计定义。
+ * 浅色值写在 .case-Gazette 作用域里（容器见本案例 App.tsx），
+ * 深色值写在 .dark .case-Gazette 下，不会影响其他案例和根应用。
+ * 下面的颜色是占位示例值，替换成正式设计稿即可。
+ */
+
+/* 案例专属 token：名字带 Gazette- 前缀保证全局唯一 */
+@theme {
+    --color-Gazette-highlight: #ffd166;
+    /* --font-Gazette-display: Georgia, "Times New Roman", serif; */
+    --color-gz-background: rgb(243, 240, 233);
+    --color-gz-foreground: #1c1917;
+    --color-gz-primary: #c5661e;
+    --color-gz-primary-foreground: #fffaf0;
+    --color-gz-secondary: #f0ece4;
+    --color-gz-secondary-foreground: #37322e;
+    --color-gz-muted: #f0ece4;
+    --color-gz-muted-foreground: #78716c;
+    --color-gz-accent: #e7e0d4;
+    --color-gz-accent-foreground: #281c14;
+    --color-gz-border: #e5e0d6;
+    --color-gz-ring: #c5661e;
+}
+
+/* 暂不考虑深色 */
+.case-Gazette {
+    --background: rgb(243, 240, 233);
+    --foreground: #1c1917;
+    --primary: #c5661e;
+    --primary-foreground: #fffaf0;
+    --secondary: #f0ece4;
+    --secondary-foreground: #37322e;
+    --muted: #f0ece4;
+    --muted-foreground: #78716c;
+    --accent: #e7e0d4;
+    --accent-foreground: #281c14;
+    --border: #e5e0d6;
+    --ring: #c5661e;
+    /* 整体背景：45° 细斜纹，primary 20% 透明度，1px 线每 13px 一条 */
+    background-image: repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--primary) 3.9%, transparent) 0 1px,
+        transparent 1px 13px
+    );
+}
+.bg-gazette {
+    background-color: rgb(243, 240, 233);
+}
+.gazette-paper {
+    background-color: rgb(243, 240, 233);
+    /* 双层纸纹：细颗粒（纤维感）+ 大尺度斑驳（纸张不均），均为去饱和的灰噪点，平铺无缝 */
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.25'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)' opacity='0.14'/%3E%3C/svg%3E");
+    background-size:
+        160px 160px,
+        560px 560px;
+    background-repeat: repeat;
+    /* 只保留底部的纸页投影：负 spread 把阴影盒四周内缩，抵消侧面的模糊溢出；颜色取主题背景色调暗 */
+    box-shadow: 0 6px 16px -8px
+        oklch(from var(--background) calc(l * 0.5) c h / 0.4);
+}
+
+.gz-cubeButton {
+    @apply size-12 bg-transparent hover:bg-gz-primary  hover:opacity-100 opacity-100 active:opacity-60 grid place-items-center text-lg text-gz-muted-foreground transition cursor-pointer;
+}
+
+/* Paper 首次滚动后：导航栏用主题背景色做半透明磨砂（只作用于顶部导航 .gz-nav，避免波及抽屉等其他 nav） */
+.case-Gazette.is-scrolled .gz-nav {
+    background-color: color-mix(in srgb, var(--background) 78%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+}
+
+/* 案例内所有图片叠加一层噪点，融入报纸质感（滤镜定义在 App.tsx 的内联 SVG 里） */
+.case-Gazette img {
+    filter: url(#gz-grain);
+}

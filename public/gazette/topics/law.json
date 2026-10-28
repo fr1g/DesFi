@@ -1,0 +1,17 @@
+{
+    "uniqueName": "law",
+    "title": "Dossier Justice",
+    "describe": "From the Cour de Cassation to the Conseil constitutionnel: the rulings, inquiries and institutional conflicts that decide how the Republics are governed — and how far the state may reach.",
+    "useHero": null,
+    "articles": [
+        1,
+        3,
+        6,
+        9,
+        11,
+        12,
+        13,
+        14,
+        15
+    ]
+}

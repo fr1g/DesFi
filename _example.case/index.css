@@ -1,0 +1,48 @@
+/*
+ * example 案例的主题与其他设计定义。
+ * 浅色值写在 .case-example 作用域里（容器见本案例 App.tsx），
+ * 深色值写在 .dark .case-example 下，不会影响其他案例和根应用。
+ * 下面的颜色是占位示例值，替换成正式设计稿即可。
+ */
+
+/* 案例专属 token：名字带 example- 前缀保证全局唯一 */
+@theme {
+    --color-example-highlight: #ffd166;
+    --font-example-display: Georgia, "Times New Roman", serif;
+}
+
+/* 浅色 */
+.case-example {
+    --background: #fdfcf8;
+    --foreground: #1c1917;
+    --primary: #b45309;
+    --primary-foreground: #fffaf0;
+    --secondary: #f0ece4;
+    --secondary-foreground: #1c1917;
+    --muted: #f0ece4;
+    --muted-foreground: #78716c;
+    --accent: #e7e0d4;
+    --accent-foreground: #1c1917;
+    --border: #e5e0d6;
+    --ring: #b45309;
+
+    /* 原生刻度（字体、圆角、阴影等）可直接在作用域内覆盖，不用注册 */
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+}
+
+/* 深色 */
+.dark .case-example {
+    --background: #131211;
+    --foreground: #f4f1ea;
+    --primary: #e8a33d;
+    --primary-foreground: #1c1917;
+    --secondary: #24211d;
+    --secondary-foreground: #f4f1ea;
+    --muted: #24211d;
+    --muted-foreground: #a8a29e;
+    --accent: #2e2a24;
+    --accent-foreground: #f4f1ea;
+    --border: #33302a;
+    --ring: #e8a33d;
+}

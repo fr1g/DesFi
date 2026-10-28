@@ -1,0 +1,31 @@
+@import "tailwindcss";
+@import "./fonts.css";
+@import "../_example.case/index.css";
+@import "../_Gazette.case/index.css";
+
+/* 深色模式：任意祖先节点（通常是 <html>）加上 .dark 类即生效 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * 语义色 token 注册表：全局只注册一次名字，各案例共用同一套语义名。
+ * inline 让工具类直接引用 var(--background) 这类变量，而不是把值写死进 :root，
+ * 因此每个案例可以在自己的作用域里给出不同的值，互相隔离。
+ */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-border: var(--border);
+    --color-ring: var(--ring);
+}
+
+* {
+    @apply transition;
+}

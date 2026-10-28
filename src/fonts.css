@@ -1,0 +1,183 @@
+/*
+ * 站点字体：@font-face 的 CDN 来源与字体工具类（font-*）都集中在这里。
+ * - 霞鹜文楷（含 Mono）的分片 @font-face 由 index.html 引入的 jsDelivr 样式表提供。
+ * - public/fonts/ 下的本地字体在这里补 @font-face。
+ */
+
+/* D-DIN-PRO（D-DIN 的 OFL 扩展版，6 个字重；官方 D-DIN 的 npm 包缺字体文件，故用此） */
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-400-Regular.woff2")
+        format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-500-Medium.woff2")
+        format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-600-SemiBold.woff2")
+        format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-700-Bold.woff2")
+        format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-800-ExtraBold.woff2")
+        format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "D-DIN-PRO";
+    src: url("https://cdn.jsdelivr.net/npm/@sarap422/font-d-din@1.0.6/D-DIN-PRO-900-Heavy.woff2")
+        format("woff2");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* 得意黑 Smiley Sans（SIL OFL） */
+@font-face {
+    font-family: "Smiley Sans";
+    src: url("https://cdn.jsdelivr.net/npm/@fontpkg/smiley-sans@2.0.4/SmileySans-Oblique.ttf.woff2")
+        format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* OPPO Sans 4.0（官方免费商用；可变字体，wght 100–700） */
+@font-face {
+    font-family: "OPPO Sans";
+    src: url("https://cdn.jsdelivr.net/npm/@fontpkg/oppo-sans-4-0@1.700.0/OPPO%20Sans%204.0.ttf")
+        format("truetype");
+    font-weight: 100 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Maple Mono（SIL OFL，fontsource 的 latin 子集） */
+@font-face {
+    font-family: "Maple Mono";
+    src: url("https://cdn.jsdelivr.net/npm/@fontsource/maple-mono@5.3.0/files/maple-mono-latin-400-normal.woff2")
+        format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Maple Mono";
+    src: url("https://cdn.jsdelivr.net/npm/@fontsource/maple-mono@5.3.0/files/maple-mono-latin-700-normal.woff2")
+        format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* JetBrains Mono（官方 webfonts，含连字） */
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/webfonts/JetBrainsMono-Regular.woff2")
+        format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/webfonts/JetBrainsMono-Italic.woff2")
+        format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/webfonts/JetBrainsMono-Bold.woff2")
+        format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono@v2.304/fonts/webfonts/JetBrainsMono-BoldItalic.woff2")
+        format("woff2");
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+/* Tinos（Times New Roman 的度量兼容替代，SIL OFL；自托管在 public/fonts，不走 CDN） */
+@font-face {
+    font-family: "Tinos";
+    src: url("/fonts/tinos-latin-400-normal.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Tinos";
+    src: url("/fonts/tinos-latin-400-italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Tinos";
+    src: url("/fonts/tinos-latin-700-normal.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Tinos";
+    src: url("/fonts/tinos-latin-700-italic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+/* 字体工具类：--font-* → font-*，全站可用 */
+@theme {
+    --font-lxgw-wenkai: "LXGW WenKai", "Kaiti SC", "STKaiti", "KaiTi", serif;
+    --font-lxgw-mono: "LXGW WenKai Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+        monospace;
+    --font-din: "D-DIN-PRO", "D-DIN", Bahnschrift, "DIN Alternate", "Arial Narrow", Arial,
+        sans-serif;
+    --font-oppo-sans: "OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-maple-mono: "Maple Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-smiley-sans: "Smiley Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-jetbrains-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --font-times: Tinos, "Times New Roman", "Songti SC", SimSun, serif;
+}
