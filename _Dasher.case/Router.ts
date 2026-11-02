@@ -5,6 +5,7 @@ import type { RouteObject } from 'react-router'
 // 只能出现在这些懒加载组件内部；新增页面同样用 lazy(() => import(...)) 引入。
 const App = lazy(() => import('./App'))
 const Home = lazy(() => import('./Home'))
+const Settings = lazy(() => import('./Settings'))
 
 /**
  * Dasher 案例自己的路由，由根路由（src/Router.tsx）展开注册。
@@ -18,6 +19,7 @@ const routes: RouteObject[] = [
         children: [
             // 页面做好后在这里逐条登记，例如：
             { index: true, Component: Home },
+            { path: 'settings', Component: Settings },
             // { path: 'about', Component: About },
         ],
     },

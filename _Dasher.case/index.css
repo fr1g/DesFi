@@ -2,7 +2,8 @@
  * Dasher 案例主题：仅深色模式。
  * 色 token 前缀 dsh-，值写具体色值（Tailwind 调色板），编辑器可直接预览。
  * 允许的颜色：stone（除 50）、emerald-400、amber-400/500/600、red-400、
- * olive/mist/mauve 400/500/600（图表备用线色），以及发丝线 white/10。
+ * olive/mist/mauve 300/400/500/600（图表备用线色），以及发丝线 white/10。
+ * 关于页的颜色名称使用对应色相的 300/80 变体。
  * 链接/链接式按钮：slate-500、slate-400、slate-500/80、mauve-700（visited，仅链接）。
  * tile 边界：stone-600（1px outline）；焦点：stone-300/40 2px + offset；tile 内细线：white/10。
  * 应用整体主背景只用 stone-900；stone-950 仅允许以低透明度遮罩/叠加出现。
@@ -41,12 +42,15 @@
     --color-dsh-error: oklch(70.4% 0.191 22.216); /* red-400 */
 
     /* 图表备用线色 */
+    --color-dsh-series-olive-300: oklch(82% 0.018 106.9);
     --color-dsh-series-olive-400: oklch(73.7% 0.021 106.9);
     --color-dsh-series-olive-500: oklch(58% 0.031 107.3);
     --color-dsh-series-olive-600: oklch(46.6% 0.025 107.3);
+    --color-dsh-series-mist-300: oklch(81% 0.012 214.4);
     --color-dsh-series-mist-400: oklch(72.3% 0.014 214.4);
     --color-dsh-series-mist-500: oklch(56% 0.021 213.5);
     --color-dsh-series-mist-600: oklch(45% 0.017 213.2);
+    --color-dsh-series-mauve-300: oklch(80% 0.016 323.02);
     --color-dsh-series-mauve-400: oklch(71.1% 0.019 323.02);
     --color-dsh-series-mauve-500: oklch(54.2% 0.034 322.5);
     --color-dsh-series-mauve-600: oklch(43.5% 0.029 321.78);

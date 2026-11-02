@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Outlet } from 'react-router'
+import { Outlet, useLocation, useNavigate } from 'react-router'
 import {
     ChartAnalyticsIcon,
     CheckIcon,
@@ -33,20 +33,23 @@ import { PreviewModeContext } from './tiles/PreviewModeContext'
 type DrawerSide = 'left' | 'right'
 
 type KeyIndicatorState = {
-    keys: string[]
+    keys?: string[]
     action?: string
+    navigation?: string
 }
 
 type NavItem = {
     id: string
     label: string
     icon: ReactNode
+    path?: string
 }
 
 const NAV_ITEMS: NavItem[] = [
     {
         id: 'overview',
         label: '系统概览',
+        path: '/Dasher',
         icon: (
             <HomeIcon
                 aria-hidden="true"
@@ -176,7 +179,8 @@ const NAV_ITEMS: NavItem[] = [
     },
     {
         id: 'settings',
-        label: '设备设置',
+        label: '设置 (关于)',
+        path: '/Dasher/settings',
         icon: (
             <SettingIcon
                 aria-hidden="true"
@@ -193,12 +197,16 @@ const RAIL_WIDTH = 64
 const DRAWER_WIDTH = 330
 const FOCUSABLE_SELECTOR =
     'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-const DRAWER_ROW_CLASS =
-    'flex relative h-12 w-full cursor-pointer items-center overflow-hidden bg-dsh-surface-2 text-base font-normal text-dsh-text-title transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-300/40'
+const DRAWER_ROW_BASE =
+    'flex relative h-12 w-full cursor-pointer items-center overflow-hidden text-base font-normal text-dsh-text-title transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-300/40'
+const DRAWER_ROW_CLASS = `${DRAWER_ROW_BASE} bg-dsh-surface-2`
 const DRAWER_ICON_CLASS = 'grid h-12 w-16 shrink-0 place-items-center'
 const DRAWER_LABEL_CLASS = 'min-w-0 flex-1 whitespace-nowrap pr-4 text-right'
-const RAIL_BUTTON_CLASS =
-    'grid size-12 shrink-0 place-items-center text-dsh-text-secondary transition hover:bg-stone-700 hover:text-dsh-text-title focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-300/40'
+const RAIL_BUTTON_BASE =
+    'grid size-12 shrink-0 place-items-center transition focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-300/40'
+const RAIL_BUTTON_CLASS = `${RAIL_BUTTON_BASE} text-dsh-text-secondary hover:bg-stone-700 hover:text-dsh-text-title`
+
+const normalizePath = (path: string) => path.replace(/\/$/, '') || '/'
 
 function getFocusable(container: HTMLElement | null) {
     if (!container) return []
@@ -207,12 +215,43 @@ function getFocusable(container: HTMLElement | null) {
     )
 }
 
+function getFocusNavigationLabel(element: HTMLElement): string | null {
+    const closestTile = element.closest<HTMLElement>('.dsh-tile')
+    if (!closestTile) {
+        const containedTile = element.querySelector<HTMLElement>('.dsh-tile')
+        if (containedTile) {
+            return containedTile.querySelector('h3')?.textContent?.trim() || null
+        }
+    }
+
+    const title = closestTile?.querySelector('h3')?.textContent?.trim()
+    if (closestTile === element) return title || null
+
+    const rawLabel =
+        element.getAttribute('aria-label')?.trim() ||
+        element.textContent?.replace(/\s+/g, ' ').trim() ||
+        element.getAttribute('placeholder')?.trim() ||
+        element.getAttribute('name')?.trim()
+    if (!rawLabel) return title || null
+
+    let suffix = ''
+    if (element instanceof HTMLButtonElement) suffix = '按钮'
+    else if (element instanceof HTMLInputElement) suffix = '输入框'
+    else if (element instanceof HTMLAnchorElement) suffix = '链接'
+
+    const controlLabel =
+        suffix && !rawLabel.endsWith(suffix) ? `${rawLabel}${suffix}` : rawLabel
+    return title ? `${title}/${controlLabel}` : controlLabel
+}
+
 function DrawerMenuItem({
     item,
+    active,
     expanded,
     onSelect,
 }: {
     item: NavItem
+    active: boolean
     expanded: boolean
     onSelect: () => void
 }) {
@@ -220,8 +259,9 @@ function DrawerMenuItem({
         <button
             type="button"
             aria-label={item.label}
+            aria-current={active ? 'page' : undefined}
             onClick={onSelect}
-            className={DRAWER_ROW_CLASS}
+            className={`${DRAWER_ROW_BASE} ${active ? 'bg-stone-700' : 'bg-dsh-surface-2'}`}
         >
             <span aria-hidden="true" className={DRAWER_ICON_CLASS}>
                 {item.icon}
@@ -298,6 +338,9 @@ function DrawerRail({
 }: DrawerRailProps) {
     const isLeft = side === 'left'
     const label = isLeft ? '左侧' : '右侧'
+    const navigate = useNavigate()
+    const location = useLocation()
+    const currentPath = normalizePath(location.pathname)
 
     return (
         <nav
@@ -333,15 +376,34 @@ function DrawerRail({
 
             {items.length > 0 && (
                 <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 overflow-y-auto pt-2">
-                    {items.map((item) => (
-                        <span
-                            key={item.id}
-                            title={item.label}
-                            className={RAIL_BUTTON_CLASS}
-                        >
-                            <span aria-hidden="true">{item.icon}</span>
-                        </span>
-                    ))}
+                    {items.map((item) => {
+                        const active = Boolean(item.path && item.path === currentPath)
+
+                        return item.path ? (
+                            <button
+                                key={item.id}
+                                type="button"
+                                title={item.label}
+                                aria-label={item.label}
+                                aria-current={active ? 'page' : undefined}
+                                onClick={() => navigate(item.path!)}
+                                className={`${RAIL_BUTTON_BASE} ${active
+                                    ? 'bg-stone-700 text-dsh-text-title'
+                                    : 'text-dsh-text-secondary hover:bg-stone-700 hover:text-dsh-text-title'
+                                    }`}
+                            >
+                                <span aria-hidden="true">{item.icon}</span>
+                            </button>
+                        ) : (
+                            <span
+                                key={item.id}
+                                title={item.label}
+                                className={RAIL_BUTTON_CLASS}
+                            >
+                                <span aria-hidden="true">{item.icon}</span>
+                            </span>
+                        )
+                    })}
                 </div>
             )}
 
@@ -442,6 +504,9 @@ function DrawerPanel({
     const panelLabel = isLeft ? `${label}导航抽屉` : '用户信息抽屉'
     const panelRef = useRef<HTMLDivElement>(null)
     const [expanded, setExpanded] = useState(false)
+    const location = useLocation()
+    const navigate = useNavigate()
+    const currentPath = normalizePath(location.pathname)
 
     useEffect(() => {
         const panel = panelRef.current
@@ -476,13 +541,17 @@ function DrawerPanel({
             <nav aria-label={isLeft ? `${label}导航` : '用户信息'} className="flex h-full flex-col">
                 {isLeft && <Search inputRef={searchInputRef} />}
                 {isLeft && (
-                    <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pt-2.5">
+                    <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pt-2.25">
                         {NAV_ITEMS.map((item) => (
                             <DrawerMenuItem
                                 key={item.id}
                                 item={item}
+                                active={Boolean(item.path && item.path === currentPath)}
                                 expanded={expanded}
-                                onSelect={onClose}
+                                onSelect={() => {
+                                    if (item.path) navigate(item.path)
+                                    onClose()
+                                }}
                             />
                         ))}
                     </div>
@@ -655,12 +724,14 @@ export default function App() {
     }, [openSide])
 
     useEffect(() => {
-        const modifierKeys = ['Control', 'Shift', 'Alt']
+        const modifierKeys = ['Control', 'Alt']
         const modifierLabels = (event: KeyboardEvent) => [
             ...(event.ctrlKey ? ['Ctrl'] : []),
-            ...(event.shiftKey ? ['Shift'] : []),
             ...(event.altKey ? ['Alt'] : []),
         ]
+        let keyboardFocus = false
+        let browserNavigation = false
+        let keyboardFocusTimer = 0
         const clearTimer = () => {
             if (keyIndicatorTimer.current === null) return
             window.clearTimeout(keyIndicatorTimer.current)
@@ -671,18 +742,29 @@ export default function App() {
             clearTimer()
             setKeyIndicator(null)
         }
-        const showShortcut = (keys: string[], action: string) => {
+        const showIndicator = (next: KeyIndicatorState) => {
             keyIndicatorLocked.current = true
             clearTimer()
-            setKeyIndicator({ keys, action })
+            setKeyIndicator(next)
             keyIndicatorTimer.current = window.setTimeout(() => {
                 keyIndicatorLocked.current = false
                 keyIndicatorTimer.current = null
                 setKeyIndicator(null)
             }, 1000)
         }
+        const showShortcut = (keys: string[], action: string) =>
+            showIndicator({ keys, action })
+        const showNavigation = (label: string) => showIndicator({ navigation: label })
 
         const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Tab' || event.key.startsWith('Arrow')) {
+                keyboardFocus = true
+                window.clearTimeout(keyboardFocusTimer)
+                keyboardFocusTimer = window.setTimeout(() => {
+                    keyboardFocus = false
+                }, 500)
+            }
+
             if (modifierKeys.includes(event.key)) {
                 keyIndicatorLocked.current = false
                 clearTimer()
@@ -721,11 +803,36 @@ export default function App() {
                 return
             }
 
-            const hasPreviewModifier = event.ctrlKey || event.shiftKey || event.altKey
+            const hasPreviewModifier = event.ctrlKey || event.altKey
             if (!hasPreviewModifier) return
             if (!keyIndicatorLocked.current) {
                 setKeyIndicator({ keys: modifierLabels(event) })
             }
+        }
+
+        const handleFocusIn = (event: FocusEvent) => {
+            browserNavigation = false
+            if (!keyboardFocus) return
+            keyboardFocus = false
+            window.clearTimeout(keyboardFocusTimer)
+
+            const target = event.target
+            if (!(target instanceof HTMLElement)) return
+            const label = getFocusNavigationLabel(target)
+            if (!label) return
+            showNavigation(label)
+        }
+
+        const handleFocusOut = (event: FocusEvent) => {
+            if (!keyboardFocus || event.relatedTarget !== null) return
+            browserNavigation = true
+            showNavigation('浏览器')
+        }
+
+        const handlePointerDown = () => {
+            keyboardFocus = false
+            browserNavigation = false
+            window.clearTimeout(keyboardFocusTimer)
         }
 
         const handleKeyUp = (event: KeyboardEvent) => {
@@ -735,16 +842,34 @@ export default function App() {
         }
 
         const handleBlur = () => {
+            if (browserNavigation || keyboardFocus) {
+                browserNavigation = false
+                showNavigation('浏览器')
+                return
+            }
             hideIndicator()
+        }
+
+        const handleWindowFocus = () => {
+            browserNavigation = false
         }
 
         document.addEventListener('keydown', handleKeyDown)
         document.addEventListener('keyup', handleKeyUp)
+        document.addEventListener('focusin', handleFocusIn)
+        document.addEventListener('focusout', handleFocusOut)
+        document.addEventListener('pointerdown', handlePointerDown, true)
         window.addEventListener('blur', handleBlur)
+        window.addEventListener('focus', handleWindowFocus)
         return () => {
             document.removeEventListener('keydown', handleKeyDown)
             document.removeEventListener('keyup', handleKeyUp)
+            document.removeEventListener('focusin', handleFocusIn)
+            document.removeEventListener('focusout', handleFocusOut)
+            document.removeEventListener('pointerdown', handlePointerDown, true)
             window.removeEventListener('blur', handleBlur)
+            window.removeEventListener('focus', handleWindowFocus)
+            window.clearTimeout(keyboardFocusTimer)
             clearTimer()
         }
     }, [])
@@ -837,13 +962,21 @@ export default function App() {
                                     exit={{ opacity: 0, y: -4 }}
                                     transition={{ duration: 0.12, ease: 'easeOut' }}
                                 >
-                                    <span className="text-dsh-text-title">
-                                        {keyIndicator.keys.join(' + ')}
-                                    </span>
-                                    {keyIndicator.action && (
-                                        <span className="text-dsh-text-secondary">
-                                            {keyIndicator.action}
+                                    {keyIndicator.navigation ? (
+                                        <span className="text-dsh-text-title">
+                                            导航：{keyIndicator.navigation}
                                         </span>
+                                    ) : (
+                                        <>
+                                            <span className="text-dsh-text-title">
+                                                {keyIndicator.keys?.join(' + ')}
+                                            </span>
+                                            {keyIndicator.action && (
+                                                <span className="text-dsh-text-secondary">
+                                                    {keyIndicator.action}
+                                                </span>
+                                            )}
+                                        </>
                                     )}
                                 </motion.div>
                             )}
