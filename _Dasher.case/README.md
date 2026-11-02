@@ -186,6 +186,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 
 - 初始高度中，system / interface / health / connectivity / ha / critical 由内容实测；WAN 图表和 resources 图表使用布局固定高度。
 - 顶部 system 与 interface 并排时按两者的较高自然高度统一。
+- 测量回写：measured tile 的标题行与内容层使用 `shrink-0`，避免内容被 RGL 已分配的高度反向压缩；各 tile 的 ResizeObserver 先把自然高度写入 ref，再由 `requestAnimationFrame` 合并、统一回写 `h`，避免每块 tile 单独触发一轮布局。
 - `stretchTrailingRow` 只增高：3/4/5 列时把 ha / critical 补到右侧列的最低底边；2 列时两者互相补齐；1 列不处理。
 
 ### 5.3 横向补位
@@ -194,7 +195,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - `stretchTextTileRows` 只处理行尾空位：取本行最左的可伸缩块加宽，后续同一行 tile 整体右移。
 - 扩展后的完整矩形不能与跨行 tile 重叠；遇到跨行占用时从最大宽度逐列回退，能补多少补多少。
 - 4/5 列默认会把底部 ha 补到 2U/3U，critical 保持 2U；3 列若右上方有 connectivity 跨行占用，ha 可能只补到 2U。
-- 手动缩放 ha 后，该列进入手动布局状态，暂停自动横向补位，避免自动逻辑把手动宽度撑回去。
+- 手动缩放 ha / health 后，该列进入手动布局状态，暂停自动横向补位，避免自动逻辑把手动宽度撑回去。
 - `ha` 在 2U 及以上时，内容区右侧显示主备同步延迟的 SVG 水印：`aria-hidden`、`pointer-events-none`；静止为低透明度 stone，hover 时跟随 success 色。水印用 `ResizeObserver` 跟随 tile 实际内容宽度，缩回 1U 时立即卸载。
 
 ### 5.4 纵向重排
@@ -212,6 +213,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 入口在左 rail 底部和左面板底部（`EditIcon` / 完成态 `CheckIcon`）；任意入口切换后关闭抽屉。
 - 只有编辑模式启用拖拽和 e/w 横向 resize；高度不手动拉。
 - 编辑态视觉层整体内缩 8px，块间视觉间隙固定 16px；`.dsh-tile` 的 cursor 为 `grab`。
+- 退出编辑模式时递增 `layoutVersion`，并把它并入 `GridLayout` 的 key，强制重新初始化一次、重新压缩并重新测量，确保尾部高度补齐规则在手动编辑后仍然生效。
 - 拖拽中的 RGL item `z-index: 20`，视觉层底色切到 `surface-2`，边界改为 2px dashed accent，cursor 为 `grabbing`。
 - `dragConfig.cancel` 排除按钮、链接、输入框等交互元素。
 
@@ -234,6 +236,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 顶部 padding：收窄 rail 8px，展开面板 10px；底部统一 8px。
 - 文字和图标尺寸一致：`text-base`、`size-5`。
 - 标签始终占位、`opacity: 0`；宽度达到完整展开值后 fade-in，开始收起时 fade-out。文字出现时不推开图标。
+- 关闭右侧面板时先把 nav 内容整体淡出（150ms），180ms 后再触发面板宽度收窄；关闭按钮、Esc、scrim 和 `Ctrl+E` 共用同一关闭路径。左面板仍即时收起。
 - 左面板底部：编辑、关闭左侧；右面板底部：退出登录（演示，无真实逻辑）、关闭右侧。
 - 右抽屉顶部是右对齐的 `DASHER` 字标 + logo，随完整展开 fade-in。
 
@@ -254,7 +257,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 
 ## 7. 搜索与快捷键
 
-- 搜索是独立 `Search.tsx`，位于左 rail 顶部；点击展开左抽屉并聚焦输入框，输入框使用 `focus-within` 2px `stone-300/40` ring。
+- 搜索是独立 `Search.tsx`，位于左 rail 顶部；点击搜索按钮会展开左抽屉并聚焦输入框（`Ctrl+K` 同样）。通过底部展开按钮或快捷键打开左面板时，初始焦点落在第一个导航项，不自动聚焦搜索框。输入框使用 `focus-within` 2px `stone-300/40` ring。
 - 输入用 es-toolkit debounce 300ms；暂无候选源，稳定后固定显示“无结果”（absolute 覆盖层，不推挤菜单）。
 - `Ctrl+K` / `Cmd+K` 模拟点击搜索按钮；只有 Ctrl+K 显示顶部提示。
 - `Ctrl+S` 切换左面板，`Ctrl+E` 切换右面板；同一个键再按一次关闭。
@@ -276,7 +279,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
   - WAN 质量：时延 mauve-500、抖动 olive-400。
   - 资源使用率：CPU mist-500、内存 mauve-500。
 - 系统概览：路由器插图 + 发丝竖线 + 设备信息；设备型号为占位，当前用户显示用户名和角色。
-- 综合健康：warning；分数、问题、告警列表和底部刷新按钮；1 列时告警列表隐藏 leader dots，改为右对齐堆叠。
+- 综合健康：warning；分数、问题、告警列表和底部刷新按钮；tile 宽度为 1U 时（包括编辑缩窄到 1U）告警列表隐藏 leader dots，改为右对齐堆叠，时间与程度各占一行。
 - 接口状态：9 个 ETH；异常状态 warning dot，异常图标 hover 变 warning，离线图标 `opacity-30`。
 - 资源使用率：CPU 整数百分比；内存总量固定 4GB，显示一位小数；CPU/RAM 任一原始占用 ≥90% 进入 warning。
 - 连接总览：下联 AP 0、下联终端 1、连接数 72，纵向数字简报。

@@ -94,7 +94,7 @@ export default function HealthTile({ compact = false }: { compact?: boolean }) {
                                     <span
                                         className={
                                             compact
-                                                ? 'block w-full text-right text-sm'
+                                                ? 'flex w-full flex-col items-end gap-0.5 text-right text-sm'
                                                 : 'flex shrink-0 items-center gap-2 text-sm'
                                         }
                                     >

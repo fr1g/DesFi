@@ -79,7 +79,7 @@ export default function Tile({
                 transition={{ duration: 0.18, ease: 'easeOut' }}
             />
             {title && (
-                <div className="relative items-center justify-between gap-2 ">
+                <div className="relative shrink-0 items-center justify-between gap-2 ">
                     <h3 ref={titleRef} className="text-base font-semibold text-dsh-text-title">
                         {title}
                     </h3>
@@ -95,7 +95,7 @@ export default function Tile({
             {children && (
                 <div
                     ref={contentRef}
-                    className={`mt-2 flex gap-4 flex-col ${measured ? '' : 'min-h-0 flex-1'}`}
+                    className={`mt-2 flex gap-4 flex-col ${measured ? 'shrink-0' : 'min-h-0 flex-1'}`}
                 >
                     {children}
                 </div>

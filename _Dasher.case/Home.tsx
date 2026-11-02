@@ -1,4 +1,4 @@
-import { useCallback, useContext, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { GridLayout } from 'react-grid-layout'
 import type { EventCallback, Layout } from 'react-grid-layout'
 import './styles/react-grid-layout.css'
@@ -40,6 +40,7 @@ export default function Home() {
     const baseLayout = LAYOUTS[columns] ?? LAYOUTS[5]
     const [layoutByColumns, setLayoutByColumns] = useState<Record<number, Layout>>({})
     const [manualLayoutColumns, setManualLayoutColumns] = useState<Record<number, boolean>>({})
+    const [layoutVersion, setLayoutVersion] = useState(0)
     const stretchHeights = useCallback(
         (next: Layout) => stretchTrailingRow(next, columns),
         [columns],
@@ -51,7 +52,16 @@ export default function Home() {
         ? rawLayout
         : stretchTextTileRows(rawLayout, columns)
     const editing = useContext(EditModeContext)
+    const wasEditingRef = useRef(editing)
     const naturalHeights = useRef<Record<number, Record<string, number>>>({})
+    const measureFrame = useRef<number | null>(null)
+
+    useEffect(() => {
+        if (wasEditingRef.current && !editing) {
+            setLayoutVersion((value) => value + 1)
+        }
+        wasEditingRef.current = editing
+    }, [editing])
 
     const updateCurrentLayout = useCallback(
         (updater: (current: Layout) => Layout) => {
@@ -74,7 +84,7 @@ export default function Home() {
 
     const handleResizeStop = useCallback<EventCallback>(
         (_next, _oldItem, newItem) => {
-            if (newItem?.i !== 'ha') return
+            if (newItem?.i !== 'ha' && newItem?.i !== 'health') return
             setManualLayoutColumns((previous) =>
                 previous[columns] ? previous : { ...previous, [columns]: true },
             )
@@ -82,56 +92,90 @@ export default function Home() {
         [columns],
     )
 
-    const handleMeasure = useCallback(
-        (id: string, naturalHeight: number) => {
-            const measurements = (naturalHeights.current[columns] ??= {})
-            measurements[id] = naturalHeight
-            const h = Math.max(1, Math.ceil(naturalHeight / ROW_HEIGHT))
-            const toRows = (value: number | undefined) =>
-                value === undefined ? undefined : Math.max(1, Math.ceil(value / ROW_HEIGHT))
-
+    const applyMeasurements = useCallback(
+        (measurements: Record<string, number>) => {
             updateCurrentLayout((current) => {
-                const system = current.find((entry) => entry.i === 'system')
-                const iface = current.find((entry) => entry.i === 'interface')
+                let changed = false
+                let next = current.map((entry) => {
+                    const naturalHeight = measurements[entry.i]
+                    if (naturalHeight === undefined) return entry
+                    const h = Math.max(1, Math.ceil(naturalHeight / ROW_HEIGHT))
+                    if (entry.h === h) return entry
+                    changed = true
+                    return { ...entry, h }
+                })
+
+                const system = next.find((entry) => entry.i === 'system')
+                const iface = next.find((entry) => entry.i === 'interface')
                 const paired =
                     system !== undefined &&
                     iface !== undefined &&
                     system.y === iface.y &&
                     system.x < iface.x
 
-                if (paired && (id === 'system' || id === 'interface')) {
-                    const systemRows = toRows(measurements.system)
-                    const interfaceRows = toRows(measurements.interface)
-                    if (systemRows === undefined || interfaceRows === undefined) {
-                        const item = id === 'system' ? system : iface
-                        if (item.h === h) return current
-                        return current.map((entry) => (entry.i === id ? { ...entry, h } : entry))
-                    }
-                    const rowHeight = Math.max(systemRows, interfaceRows)
-                    if (system.h === rowHeight && iface.h === rowHeight) return current
-                    return current.map((entry) =>
-                        entry.i === 'system' || entry.i === 'interface'
-                            ? { ...entry, h: rowHeight }
-                            : entry,
+                if (
+                    paired &&
+                    measurements.system !== undefined &&
+                    measurements.interface !== undefined
+                ) {
+                    const systemRows = Math.max(
+                        1,
+                        Math.ceil(measurements.system / ROW_HEIGHT),
                     )
+                    const interfaceRows = Math.max(
+                        1,
+                        Math.ceil(measurements.interface / ROW_HEIGHT),
+                    )
+                    const rowHeight = Math.max(systemRows, interfaceRows)
+                    if (system.h !== rowHeight || iface.h !== rowHeight) {
+                        changed = true
+                        next = next.map((entry) =>
+                            entry.i === 'system' || entry.i === 'interface'
+                                ? { ...entry, h: rowHeight }
+                                : entry,
+                        )
+                    }
                 }
 
-                const item = current.find((entry) => entry.i === id)
-                if (!item || item.h === h) return current
-                return current.map((entry) => (entry.i === id ? { ...entry, h } : entry))
+                return changed ? next : current
             })
         },
-        [columns, updateCurrentLayout],
+        [updateCurrentLayout],
     )
 
+    const handleMeasure = useCallback(
+        (id: string, naturalHeight: number) => {
+            const measurements = (naturalHeights.current[columns] ??= {})
+            measurements[id] = naturalHeight
+            if (measureFrame.current !== null) return
+
+            measureFrame.current = window.requestAnimationFrame(() => {
+                measureFrame.current = null
+                const latest = naturalHeights.current[columns]
+                if (latest) applyMeasurements(latest)
+            })
+        },
+        [applyMeasurements, columns],
+    )
+
+    useEffect(() => {
+        return () => {
+            if (measureFrame.current !== null) {
+                window.cancelAnimationFrame(measureFrame.current)
+                measureFrame.current = null
+            }
+        }
+    }, [columns])
+
     const haWidth = layout.find((item) => item.i === 'ha')?.w ?? 1
+    const healthWidth = layout.find((item) => item.i === 'health')?.w ?? 1
 
     return (
         <div className={`min-h-screen w-full overflow-x-hidden ${editing ? 'is-editing' : ''} py-px`}>
             <div className="mx-auto" style={{ width }}>
                 <TileMeasureContext.Provider value={handleMeasure}>
                     <GridLayout
-                        key={columns}
+                        key={`${columns}-${layoutVersion}`}
                         width={width}
                         layout={layout}
                         onLayoutChange={handleLayoutChange}
@@ -157,7 +201,7 @@ export default function Home() {
                             <InterfaceStatusTile />
                         </div>
                         <div key="health" id="dasher-health" tabIndex={-1} className={SECTION_FOCUS}>
-                            <HealthTile compact={columns === 1} />
+                            <HealthTile compact={healthWidth === 1} />
                         </div>
                         <div key="wan-rate" id="dasher-wan-rate" tabIndex={-1} className={SECTION_FOCUS}>
                             <WanRateTile />

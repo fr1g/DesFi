@@ -15,15 +15,16 @@ export default function CriticalEventsTile() {
                     <span className="text-3xl font-semibold text-dsh-error">{EVENT.count}</span>
                     <span className="text-sm font-thin text-dsh-text-secondary">个严重事件</span>
                 </p>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 relative">
                     <p className="text-dsh-error">{EVENT.title}</p>
                     <p className="mt-1 text-sm font-thin text-dsh-text-secondary">
                         {EVENT.impact} · {EVENT.duration}
                     </p>
+                    <button type="button" className="dsh-link-button shrink-0 text-sm absolute top-0 right-0">
+                        查看影响
+                    </button>
                 </div>
-                <button type="button" className="dsh-link-button shrink-0 text-sm">
-                    查看影响
-                </button>
+
             </div>
         </Tile>
     )

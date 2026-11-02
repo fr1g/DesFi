@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
@@ -195,6 +195,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const RAIL_WIDTH = 64
 const DRAWER_WIDTH = 330
+const RIGHT_PANEL_FADE_MS = 180
 const FOCUSABLE_SELECTOR =
     'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 const DRAWER_ROW_BASE =
@@ -345,7 +346,7 @@ function DrawerRail({
     return (
         <nav
             aria-label={isLeft ? `${label}导航` : '用户信息'}
-            className={`fixed top-0 bottom-0 z-40 flex w-16 flex-col items-center bg-dsh-surface-2 max-[787.98px]:hidden ${isLeft ? 'left-0 border-r-stone-50/50' : 'right-0 border-l-stone-50/50'
+            className={`fixed select-none top-0 bottom-0 z-40 flex w-16 flex-col items-center bg-dsh-surface-2 max-[787.98px]:hidden ${isLeft ? 'left-0 border-r-stone-50/50' : 'right-0 border-l-stone-50/50'
                 }`}
         >
             {isLeft && onSearch && (
@@ -487,6 +488,7 @@ function DrawerRail({
 type DrawerPanelProps = {
     side: DrawerSide
     editing: boolean
+    closing: boolean
     searchInputRef: RefObject<HTMLInputElement | null>
     onToggleEditing: () => void
     onClose: () => void
@@ -495,6 +497,7 @@ type DrawerPanelProps = {
 function DrawerPanel({
     side,
     editing,
+    closing,
     searchInputRef,
     onToggleEditing,
     onClose,
@@ -538,7 +541,13 @@ function DrawerPanel({
             transition={{ duration: 0.2, ease: 'easeOut' }}
             style={{ maxWidth: '100vw' }}
         >
-            <nav aria-label={isLeft ? `${label}导航` : '用户信息'} className="flex h-full flex-col">
+            <motion.nav
+                aria-label={isLeft ? `${label}导航` : '用户信息'}
+                className="flex h-full flex-col"
+                initial={false}
+                animate={{ opacity: closing ? 0 : 1 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+            >
                 {isLeft && <Search inputRef={searchInputRef} />}
                 {isLeft && (
                     <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pt-2.25">
@@ -634,7 +643,7 @@ function DrawerPanel({
                         onClick={onClose}
                     />
                 </div>
-            </nav>
+            </motion.nav>
         </motion.div>
     )
 }
@@ -644,10 +653,13 @@ export default function App() {
     const [editing, setEditing] = useState(false)
     const [preview, setPreview] = useState(() => window.location.hash.includes('@preview'))
     const [keyIndicator, setKeyIndicator] = useState<KeyIndicatorState | null>(null)
+    const [closingRight, setClosingRight] = useState(false)
     const restoreFocusRef = useRef<HTMLElement | null>(null)
     const searchInputRef = useRef<HTMLInputElement>(null)
+    const focusSearchOnOpenRef = useRef(false)
     const keyIndicatorLocked = useRef(false)
     const keyIndicatorTimer = useRef<number | null>(null)
+    const closeTimerRef = useRef<number | null>(null)
 
     useEffect(() => {
         const updatePreview = () => setPreview(window.location.hash.includes('@preview'))
@@ -667,10 +679,44 @@ export default function App() {
         return () => telemetryStore.resume()
     }, [preview])
 
-    const openDrawer = (side: DrawerSide, trigger: HTMLElement) => {
+    const openDrawer = (side: DrawerSide, trigger: HTMLElement, focusSearch = false) => {
+        if (closeTimerRef.current !== null) {
+            window.clearTimeout(closeTimerRef.current)
+            closeTimerRef.current = null
+        }
+        setClosingRight(false)
+        focusSearchOnOpenRef.current = focusSearch
         restoreFocusRef.current = trigger
         setOpenSide(side)
     }
+
+    const closeDrawer = useCallback(() => {
+        if (openSide === 'right') {
+            if (closingRight || closeTimerRef.current !== null) return
+            setClosingRight(true)
+            closeTimerRef.current = window.setTimeout(() => {
+                closeTimerRef.current = null
+                setOpenSide(null)
+            }, RIGHT_PANEL_FADE_MS)
+            return
+        }
+        setOpenSide(null)
+    }, [openSide, closingRight])
+
+    const closeDrawerRef = useRef(closeDrawer)
+
+    useEffect(() => {
+        closeDrawerRef.current = closeDrawer
+    }, [closeDrawer])
+
+    useEffect(() => {
+        return () => {
+            if (closeTimerRef.current !== null) {
+                window.clearTimeout(closeTimerRef.current)
+                closeTimerRef.current = null
+            }
+        }
+    }, [])
 
     const openSearch = (trigger: HTMLElement) => {
         const floating = document.getElementById('dasher-floating-trigger')
@@ -679,7 +725,7 @@ export default function App() {
             : floating instanceof HTMLElement
                 ? floating
                 : trigger
-        openDrawer('left', visibleTrigger)
+        openDrawer('left', visibleTrigger, true)
         window.requestAnimationFrame(() => {
             window.requestAnimationFrame(() => searchInputRef.current?.focus())
         })
@@ -700,7 +746,7 @@ export default function App() {
 
             const side: DrawerSide = key === 's' ? 'left' : 'right'
             if (openSide === side) {
-                setOpenSide(null)
+                closeDrawer()
                 return
             }
 
@@ -721,7 +767,7 @@ export default function App() {
 
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [openSide])
+    }, [openSide, closeDrawer])
 
     useEffect(() => {
         const modifierKeys = ['Control', 'Alt']
@@ -883,12 +929,20 @@ export default function App() {
 
         const panel = document.getElementById(`dasher-${openSide}-drawer`)
         const focusable = getFocusable(panel)
-            ; (focusable[0] ?? panel)?.focus()
+        const focusSearch = openSide === 'left' && focusSearchOnOpenRef.current
+        focusSearchOnOpenRef.current = false
+        const initialFocus =
+            focusSearch && searchInputRef.current
+                ? searchInputRef.current
+                : openSide === 'left'
+                    ? focusable.find((element) => element !== searchInputRef.current) ?? panel
+                    : focusable[0] ?? panel
+        initialFocus?.focus()
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 event.preventDefault()
-                setOpenSide(null)
+                closeDrawerRef.current()
                 return
             }
             if (event.key !== 'Tab') return
@@ -1043,7 +1097,7 @@ export default function App() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2, ease: 'easeOut' }}
-                            onClick={() => setOpenSide(null)}
+                            onClick={closeDrawer}
                         />
                     )}
                 </AnimatePresence>
@@ -1054,9 +1108,10 @@ export default function App() {
                             key={openSide}
                             side={openSide}
                             editing={editing}
+                            closing={closingRight}
                             searchInputRef={searchInputRef}
                             onToggleEditing={toggleEditing}
-                            onClose={() => setOpenSide(null)}
+                            onClose={closeDrawer}
                         />
                     )}
                 </AnimatePresence>
