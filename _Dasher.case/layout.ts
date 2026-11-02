@@ -72,6 +72,30 @@ export const LAYOUTS: Record<number, Layout> = {
 }
 
 /**
+ * 单个 trailing tile 的增高：目标底边之外，遇到下方横向重叠的 tile 时只到它的顶边，
+ * 避免继续把已有的占位向下推，造成高度/重排反馈。
+ */
+function stretchTileTo(
+    layout: Layout,
+    item: LayoutItem,
+    targetBottom: number,
+): LayoutItem {
+    if (targetBottom <= item.y + item.h) return item
+
+    let allowedBottom = targetBottom
+    for (const other of layout) {
+        if (other.i === item.i) continue
+        const overlapsX =
+            item.x < other.x + other.w && item.x + item.w > other.x
+        if (!overlapsX || other.y < item.y + item.h) continue
+        allowedBottom = Math.min(allowedBottom, other.y)
+    }
+
+    if (allowedBottom <= item.y + item.h) return item
+    return { ...item, h: allowedBottom - item.y }
+}
+
+/**
  * 宽版底部 ha/critical 补到右侧列的最低底边；2 列时两者并排，互相补齐到较高者。
  * 只增高不缩回。
  */
@@ -85,9 +109,9 @@ export function stretchTrailingRow(layout: Layout, columns: number): Layout {
         let changed = false
         const next = layout.map((item) => {
             if (item.i !== 'ha' && item.i !== 'critical') return item
-            if (targetBottom <= item.y + item.h) return item
-            changed = true
-            return { ...item, h: targetBottom - item.y }
+            const stretched = stretchTileTo(layout, item, targetBottom)
+            if (stretched !== item) changed = true
+            return stretched
         })
         return changed ? next : layout
     }
@@ -107,9 +131,9 @@ export function stretchTrailingRow(layout: Layout, columns: number): Layout {
     let changed = false
     const next = layout.map((item) => {
         if (item.i !== 'ha' && item.i !== 'critical') return item
-        if (targetBottom <= item.y + item.h) return item
-        changed = true
-        return { ...item, h: targetBottom - item.y }
+        const stretched = stretchTileTo(layout, item, targetBottom)
+        if (stretched !== item) changed = true
+        return stretched
     })
 
     return changed ? next : layout

@@ -71,16 +71,16 @@ export default function Settings() {
                     </Tile>
 
                     <Tile title="悬浮才显色">
-                        <div className="flex flex-col gap-3 text-sm leading-6 text-dsh-text-secondary">
+                        <div className="flex flex-col gap-3 text-sm leading-6 text-dsh-text-secondary group">
                             <p>
                                 警告状态默认保持 tile
-                                原色，只在标题右上角留下一个 warning
-                                点；鼠标悬浮后，相关文字或数字才显示 warning 或
-                                success 色。危险状态不使用状态点，直接用红色文字吸引注意。
+                                原色，只在标题右上角留下一个 <span className='group-hover:text-dsh-warning'>warning</span>
+                                点；鼠标悬浮后，相关文字或数字才显示 <span className='group-hover:text-dsh-warning'>warning</span> 或{' '}
+                                <span className='group-hover:text-dsh-success'>success</span> 色。危险状态不使用状态点，直接用红色文字吸引注意。
                             </p>
                             <p>
                                 资源使用率也只给达到 90%
-                                的指标着色，避免正常指标被误读。颜色不是装饰，而是最后才出现的状态提示。
+                                的指标着色，避免正常指标被<span className='group-hover:text-dsh-error '>误读</span>。颜色不是装饰，而是最后才出现的状态提示。
                             </p>
                         </div>
                     </Tile>

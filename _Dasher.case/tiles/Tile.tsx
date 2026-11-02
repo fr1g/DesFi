@@ -1,8 +1,9 @@
-import { useContext, useEffect, useRef } from 'react'
+import { useContext, useEffect, useId, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { motion } from 'motion/react'
 import { EditModeContext } from './EditModeContext'
 import { TileMeasureContext } from './TileMeasureContext'
+import { useTileStatusRegistry } from './TileStatus'
 
 type TileProps = {
     title?: string
@@ -11,6 +12,8 @@ type TileProps = {
     style?: CSSProperties
     measureId?: string
     status?: 'success' | 'warning' | 'danger'
+    hasWarning?: boolean
+    hasError?: boolean
 }
 
 const EDIT_INSET = 8
@@ -22,13 +25,27 @@ export default function Tile({
     style,
     measureId,
     status,
+    hasWarning,
+    hasError,
 }: TileProps) {
     const measure = useContext(TileMeasureContext)
     const editing = useContext(EditModeContext)
+    const statusRegistry = useTileStatusRegistry()
+    const tileStatusId = useId()
     const rootRef = useRef<HTMLElement>(null)
     const titleRef = useRef<HTMLHeadingElement>(null)
     const contentRef = useRef<HTMLDivElement>(null)
     const measured = Boolean(measureId && measure)
+    const warning = hasWarning ?? status === 'warning'
+    const error = hasError ?? status === 'danger'
+
+    useEffect(() => {
+        statusRegistry?.setStatus(tileStatusId, { warn: warning, error })
+    }, [error, statusRegistry, tileStatusId, warning])
+
+    useEffect(() => {
+        return () => statusRegistry?.clearStatus(tileStatusId)
+    }, [statusRegistry, tileStatusId])
 
     useEffect(() => {
         if (!measureId || !measure) return
@@ -63,7 +80,7 @@ export default function Tile({
     return (
         <section
             ref={rootRef}
-            className={`dsh-tile group flex gap-2 h-full min-h-0 flex-col p-4 text-base ${className}`}
+            className={`dsh-tile group flex gap-2 h-full min-h-0 flex-col p-4 text-base ${warning ? 'has-warning' : ''} ${error ? 'has-error' : ''} ${className}`}
             style={style}
         >
             <motion.div
@@ -83,7 +100,7 @@ export default function Tile({
                     <h3 ref={titleRef} className="text-base font-semibold text-dsh-text-title">
                         {title}
                     </h3>
-                    {status === 'warning' && (
+                    {warning && (
                         <span
                             role="img"
                             aria-label="警告状态"

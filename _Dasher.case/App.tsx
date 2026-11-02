@@ -26,9 +26,12 @@ import {
 import Search from './Search'
 import UserPanel from './UserPanel'
 import dasherLogo from './dasher.svg'
+import { CURRENT_USER } from './mockUser'
 import { telemetryStore } from './tools/telemetry'
 import { EditModeContext } from './tiles/EditModeContext'
 import { PreviewModeContext } from './tiles/PreviewModeContext'
+import { useTileStatusCounts } from './tiles/TileStatus'
+import { TileStatusProvider } from './tiles/TileStatusProvider'
 
 type DrawerSide = 'left' | 'right'
 
@@ -342,11 +345,19 @@ function DrawerRail({
     const navigate = useNavigate()
     const location = useLocation()
     const currentPath = normalizePath(location.pathname)
+    const statusCounts = useTileStatusCounts()
+    const errorCountLabel = statusCounts.error > 9 ? '9+' : String(statusCounts.error)
 
     return (
         <nav
-            aria-label={isLeft ? `${label}导航` : '用户信息'}
-            className={`fixed select-none top-0 bottom-0 z-40 flex w-16 flex-col items-center bg-dsh-surface-2 max-[787.98px]:hidden ${isLeft ? 'left-0 border-r-stone-50/50' : 'right-0 border-l-stone-50/50'
+            aria-label={
+                isLeft
+                    ? `${label}导航`
+                    : `用户信息，${statusCounts.warn} 个警告，${statusCounts.error} 个错误`
+            }
+            data-tile-warnings={statusCounts.warn}
+            data-tile-errors={statusCounts.error}
+            className={`fixed top-0 bottom-0 z-40 flex w-16 flex-col items-center bg-dsh-surface-2 max-[787.98px]:hidden ${isLeft ? 'left-0 border-r-stone-50/50' : 'right-0 border-l-stone-50/50'
                 }`}
         >
             {isLeft && onSearch && (
@@ -370,8 +381,45 @@ function DrawerRail({
             )}
 
             {!isLeft && (
-                <div className="mt-2 grid size-12 place-items-center" aria-hidden="true">
-                    <img src={dasherLogo} alt="" className="size-7 scale-80 invert" />
+                <div>
+                    <div className="mt-2 grid size-12 place-items-center" aria-hidden="true">
+                        <img src={dasherLogo} alt="" className="size-7 scale-80 invert" />
+                    </div>
+                    <div className="mt-2 grid size-12 place-items-center select-none -translate-y-1.5" aria-hidden="true">
+                        <p
+                            className="w-12 truncate text-center text-sm text-dsh-text-secondary translate-y-1.5"
+                            title={CURRENT_USER.name}
+                        >
+                            {CURRENT_USER.name}
+                        </p>
+                        <p
+                            className="w-12 truncate text-center text-xs/3 text-dsh-text-secondary/50!"
+                            title={CURRENT_USER.role}
+                        >
+                            {CURRENT_USER.role}
+                        </p>
+                    </div>
+                    {
+                        statusCounts.error > 0 &&
+                        <div className="mt-2 grid w-12 place-items-center select-none" aria-hidden="true">
+                            <motion.p
+                                key={errorCountLabel}
+                                className="text-center text-xl text-dsh-error"
+                                initial={{ scale: 1 }}
+                                animate={{ scale: [1, 1.6, 1.6, 1] }}
+                                transition={{
+                                    duration: 0.66,
+                                    times: [0, 0.1, 0.86, 1],
+                                    ease: 'easeOut',
+                                }}
+                            >
+                                {errorCountLabel}
+                            </motion.p>
+                            <p className="text-center text-xs/2 text-dsh-text-secondary/50!">
+                                严重
+                            </p>
+                        </div>
+                    }
                 </div>
             )}
 
@@ -771,12 +819,11 @@ export default function App() {
 
     useEffect(() => {
         const modifierKeys = ['Control', 'Alt']
-        const modifierLabels = (event: KeyboardEvent) => [
-            ...(event.ctrlKey ? ['Ctrl'] : []),
-            ...(event.altKey ? ['Alt'] : []),
+        const modifierLabels = (event: KeyboardEvent, exclude?: string) => [
+            ...(event.ctrlKey && exclude !== 'Control' ? ['Ctrl'] : []),
+            ...(event.altKey && exclude !== 'Alt' ? ['Alt'] : []),
         ]
         let keyboardFocus = false
-        let browserNavigation = false
         let keyboardFocusTimer = 0
         const clearTimer = () => {
             if (keyIndicatorTimer.current === null) return
@@ -857,7 +904,6 @@ export default function App() {
         }
 
         const handleFocusIn = (event: FocusEvent) => {
-            browserNavigation = false
             if (!keyboardFocus) return
             keyboardFocus = false
             window.clearTimeout(keyboardFocusTimer)
@@ -871,33 +917,28 @@ export default function App() {
 
         const handleFocusOut = (event: FocusEvent) => {
             if (!keyboardFocus || event.relatedTarget !== null) return
-            browserNavigation = true
             showNavigation('浏览器')
         }
 
         const handlePointerDown = () => {
             keyboardFocus = false
-            browserNavigation = false
             window.clearTimeout(keyboardFocusTimer)
         }
 
         const handleKeyUp = (event: KeyboardEvent) => {
             if (!modifierKeys.includes(event.key) || keyIndicatorLocked.current) return
-            const keys = modifierLabels(event)
+            const keys = modifierLabels(event, event.key)
             setKeyIndicator(keys.length > 0 ? { keys } : null)
         }
 
         const handleBlur = () => {
-            if (browserNavigation || keyboardFocus) {
-                browserNavigation = false
-                showNavigation('浏览器')
-                return
-            }
             hideIndicator()
         }
 
         const handleWindowFocus = () => {
-            browserNavigation = false
+            keyboardFocus = false
+            window.clearTimeout(keyboardFocusTimer)
+            hideIndicator()
         }
 
         document.addEventListener('keydown', handleKeyDown)
@@ -980,148 +1021,150 @@ export default function App() {
     }, [openSide])
 
     return (
-        <EditModeContext.Provider value={editing}>
-            <div className="case-Dasher min-h-screen bg-dsh-surface-0 font-normal text-dsh-text relative font-maple-mono">
-                <div inert={openSide !== null}>
-                    <DrawerRail
-                        side="left"
-                        items={NAV_ITEMS}
-                        open={openSide === 'left'}
-                        disabled={openSide !== null}
-                        editing={editing}
-                        onOpen={(trigger) => openDrawer('left', trigger)}
-                        onToggleEditing={toggleEditing}
-                        onSearch={openSearch}
-                    />
-                    <DrawerRail
-                        side="right"
-                        items={[]}
-                        open={openSide === 'right'}
-                        disabled={openSide !== null}
-                        editing={editing}
-                        onOpen={(trigger) => openDrawer('right', trigger)}
-                        onToggleEditing={toggleEditing}
-                    />
-                    <div className="pointer-events-none fixed left-1/2 top-0 z-[1000] -translate-x-1/2">
-                        <AnimatePresence>
-                            {keyIndicator && (
-                                <motion.div
-                                    key="key-indicator"
-                                    id="key-indicator"
-                                    role="status"
-                                    aria-live="polite"
-                                    className="flex w-fit items-center gap-2 bg-stone-700 px-2 py-1 text-sm outline outline-2 -outline-offset-1 outline-dsh-hairline"
-                                    initial={{ opacity: 0, y: -4 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -4 }}
-                                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                                >
-                                    {keyIndicator.navigation ? (
-                                        <span className="text-dsh-text-title">
-                                            导航：{keyIndicator.navigation}
-                                        </span>
-                                    ) : (
-                                        <>
-                                            <span className="text-dsh-text-title">
-                                                {keyIndicator.keys?.join(' + ')}
-                                            </span>
-                                            {keyIndicator.action && (
-                                                <span className="text-dsh-text-secondary">
-                                                    {keyIndicator.action}
-                                                </span>
-                                            )}
-                                        </>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <PreviewModeContext.Provider value={preview}>
-                        <Outlet />
-                    </PreviewModeContext.Provider>
-
-                    <div className='fixed z-50 bottom-0 left-0 right-0 outline-1 -outline-offset-1 outline-dsh-hairline hidden max-[787.98px]:flex will-change-auto bg-dsh-surface-2 overflow-hidden'>
-                        <button
-                            type="button"
-                            id="dasher-floating-trigger"
-                            className="grid size-14 cursor-pointer place-items-center bg-dsh-surface-2 text-dsh-text grow  transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-stone-300/40 "
-                            aria-label="打开左侧导航"
-                            aria-expanded={openSide === 'left'}
-                            aria-controls="dasher-left-drawer"
-                            aria-haspopup="dialog"
+        <TileStatusProvider>
+            <EditModeContext.Provider value={editing}>
+                <div className="case-Dasher min-h-screen bg-dsh-surface-0 font-normal text-dsh-text relative font-maple-mono">
+                    <div inert={openSide !== null}>
+                        <DrawerRail
+                            side="left"
+                            items={NAV_ITEMS}
+                            open={openSide === 'left'}
                             disabled={openSide !== null}
-                            onClick={(event) => openDrawer('left', event.currentTarget)}
-                        >
-                            <MenuIcon
-                                aria-hidden="true"
-                                className="size-6"
-                                fillColor="transparent"
-                                strokeColor="currentColor"
-                                strokeWidth={2}
-                            />
-                        </button>
-                        <div className='w-px bg-stone-300/10'></div>
-                        <button
-                            type="button"
-                            id="dasher-floating-trigger-right"
-                            className="grid size-14 cursor-pointer place-items-center bg-dsh-surface-2 text-dsh-text grow  transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-stone-300/40 "
-                            aria-label="打开用户信息"
-                            aria-expanded={openSide === 'right'}
-                            aria-controls="dasher-right-drawer"
-                            aria-haspopup="dialog"
-                            disabled={openSide !== null}
-                            onClick={(event) => openDrawer('right', event.currentTarget)}
-                        >
-                            <UserIcon
-                                aria-hidden="true"
-                                className="size-6"
-                                fillColor="transparent"
-                                strokeColor="currentColor"
-                                strokeWidth={2}
-                            />
-                        </button>
-                    </div>
-
-                </div>
-
-                <AnimatePresence>
-                    {openSide !== null && (
-                        <motion.button
-                            key="dasher-drawer-scrim"
-                            type="button"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            className="fixed inset-0 z-[60] cursor-pointer bg-stone-950/30"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2, ease: 'easeOut' }}
-                            onClick={closeDrawer}
-                        />
-                    )}
-                </AnimatePresence>
-
-                <AnimatePresence>
-                    {openSide !== null && (
-                        <DrawerPanel
-                            key={openSide}
-                            side={openSide}
                             editing={editing}
-                            closing={closingRight}
-                            searchInputRef={searchInputRef}
+                            onOpen={(trigger) => openDrawer('left', trigger)}
                             onToggleEditing={toggleEditing}
-                            onClose={closeDrawer}
+                            onSearch={openSearch}
                         />
-                    )}
-                </AnimatePresence>
+                        <DrawerRail
+                            side="right"
+                            items={[]}
+                            open={openSide === 'right'}
+                            disabled={openSide !== null}
+                            editing={editing}
+                            onOpen={(trigger) => openDrawer('right', trigger)}
+                            onToggleEditing={toggleEditing}
+                        />
+                        <div className="pointer-events-none fixed left-1/2 top-0 z-[1000] -translate-x-1/2">
+                            <AnimatePresence>
+                                {keyIndicator && (
+                                    <motion.div
+                                        key="key-indicator"
+                                        id="key-indicator"
+                                        role="status"
+                                        aria-live="polite"
+                                        className="flex w-fit items-center gap-2 bg-stone-700 px-2 py-1 text-sm outline outline-2 -outline-offset-1 outline-dsh-hairline"
+                                        initial={{ opacity: 0, y: -4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -4 }}
+                                        transition={{ duration: 0.12, ease: 'easeOut' }}
+                                    >
+                                        {keyIndicator.navigation ? (
+                                            <span className="text-dsh-text-title">
+                                                导航：{keyIndicator.navigation}
+                                            </span>
+                                        ) : (
+                                            <>
+                                                <span className="text-dsh-text-title">
+                                                    {keyIndicator.keys?.join(' + ')}
+                                                </span>
+                                                {keyIndicator.action && (
+                                                    <span className="text-dsh-text-secondary">
+                                                        {keyIndicator.action}
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
-                <span className="sr-only" aria-live="polite">
-                    {editing ? '编辑模式已开启' : '编辑模式已关闭'}
-                </span>
+                        <PreviewModeContext.Provider value={preview}>
+                            <Outlet />
+                        </PreviewModeContext.Provider>
 
-                {/* 页脚插槽 */}
-            </div>
-        </EditModeContext.Provider>
+                        <div className='fixed z-50 bottom-0 left-0 right-0 outline-1 -outline-offset-1 outline-dsh-hairline hidden max-[787.98px]:flex will-change-auto bg-dsh-surface-2 overflow-hidden'>
+                            <button
+                                type="button"
+                                id="dasher-floating-trigger"
+                                className="grid size-14 cursor-pointer place-items-center bg-dsh-surface-2 text-dsh-text grow  transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-stone-300/40 "
+                                aria-label="打开左侧导航"
+                                aria-expanded={openSide === 'left'}
+                                aria-controls="dasher-left-drawer"
+                                aria-haspopup="dialog"
+                                disabled={openSide !== null}
+                                onClick={(event) => openDrawer('left', event.currentTarget)}
+                            >
+                                <MenuIcon
+                                    aria-hidden="true"
+                                    className="size-6"
+                                    fillColor="transparent"
+                                    strokeColor="currentColor"
+                                    strokeWidth={2}
+                                />
+                            </button>
+                            <div className='w-px bg-stone-300/10'></div>
+                            <button
+                                type="button"
+                                id="dasher-floating-trigger-right"
+                                className="grid size-14 cursor-pointer place-items-center bg-dsh-surface-2 text-dsh-text grow  transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-stone-300/40 "
+                                aria-label="打开用户信息"
+                                aria-expanded={openSide === 'right'}
+                                aria-controls="dasher-right-drawer"
+                                aria-haspopup="dialog"
+                                disabled={openSide !== null}
+                                onClick={(event) => openDrawer('right', event.currentTarget)}
+                            >
+                                <UserIcon
+                                    aria-hidden="true"
+                                    className="size-6"
+                                    fillColor="transparent"
+                                    strokeColor="currentColor"
+                                    strokeWidth={2}
+                                />
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <AnimatePresence>
+                        {openSide !== null && (
+                            <motion.button
+                                key="dasher-drawer-scrim"
+                                type="button"
+                                tabIndex={-1}
+                                aria-hidden="true"
+                                className="fixed inset-0 z-[60] cursor-pointer bg-stone-950/30"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
+                                onClick={closeDrawer}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {openSide !== null && (
+                            <DrawerPanel
+                                key={openSide}
+                                side={openSide}
+                                editing={editing}
+                                closing={closingRight}
+                                searchInputRef={searchInputRef}
+                                onToggleEditing={toggleEditing}
+                                onClose={closeDrawer}
+                            />
+                        )}
+                    </AnimatePresence>
+
+                    <span className="sr-only" aria-live="polite">
+                        {editing ? '编辑模式已开启' : '编辑模式已关闭'}
+                    </span>
+
+                    {/* 页脚插槽 */}
+                </div>
+            </EditModeContext.Provider>
+        </TileStatusProvider>
     )
 }

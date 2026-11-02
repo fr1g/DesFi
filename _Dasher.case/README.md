@@ -138,7 +138,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - **综合健康**：warning；hover 时分数 89 显示 success，问题文本和“中等”告警显示 warning。
 - **接口状态**：warning；异常 ETH 图标默认正文色，hover 才显示 warning；离线图标保持 `opacity-30`。
 - **系统资源**：warning；CPU/RAM 原始占用任一达到 90% 时显示 warning 点，hover 只给达到阈值的对应数字加 warning 色。
-- **高可用**：success；默认原色，hover 时文字和右侧图表水印显示 success 色。
+- **高可用**：success；默认原色，hover 时文字和右侧心电水印显示 success 色；严重事件期间切到 error 色。
 - **严重事件**：danger；BGP 等关键信息直接使用 `red-400`，不需要状态点或 hover。
 
 ## 4. Tile 结构
@@ -148,6 +148,8 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 标题：`text-base font-semibold text-dsh-text-title`。
 - 内容：默认 `text-dsh-text`；次要信息用 `text-sm font-thin text-dsh-text-secondary`。
 - warning 状态点在标题行右上角，大小为 `size-2`。
+- `Tile` 提供 `hasWarning` / `hasError` 两个可选布尔参数；根节点会暴露 `has-warning` / `has-error` 类名。未显式传入时，`status="warning"` / `status="danger"` 分别作为默认值。
+- `TileStatusProvider` 通过 context 实时汇总 warn / error 数量；右侧收窄 rail 用 `useTileStatusCounts` 消费，并把数量写到 `data-tile-warnings` / `data-tile-errors` 与右 rail 的 `aria-label`。右 rail 的 error 数字在可见值变化时用 Motion 放大到 1.1，维持约 500ms 后回到 1。
 - 内容高度由实测决定；有图表等无内在高度的内容使用布局固定高度。
 
 ### 4.2 底部操作区
@@ -187,7 +189,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 初始高度中，system / interface / health / connectivity / ha / critical 由内容实测；WAN 图表和 resources 图表使用布局固定高度。
 - 顶部 system 与 interface 并排时按两者的较高自然高度统一。
 - 测量回写：measured tile 的标题行与内容层使用 `shrink-0`，避免内容被 RGL 已分配的高度反向压缩；各 tile 的 ResizeObserver 先把自然高度写入 ref，再由 `requestAnimationFrame` 合并、统一回写 `h`，避免每块 tile 单独触发一轮布局。
-- `stretchTrailingRow` 只增高：3/4/5 列时把 ha / critical 补到右侧列的最低底边；2 列时两者互相补齐；1 列不处理。
+- `stretchTrailingRow` 只增高：3/4/5 列时把 ha / critical 补到右侧列的最低底边；2 列时两者互相补齐；1 列不处理。增高时遇到下方横向重叠的 tile 只补到它的顶边，避免把被拖到上方的 tile 继续往下推，形成高度/重排循环。
 
 ### 5.3 横向补位
 
@@ -196,7 +198,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 扩展后的完整矩形不能与跨行 tile 重叠；遇到跨行占用时从最大宽度逐列回退，能补多少补多少。
 - 4/5 列默认会把底部 ha 补到 2U/3U，critical 保持 2U；3 列若右上方有 connectivity 跨行占用，ha 可能只补到 2U。
 - 手动缩放 ha / health 后，该列进入手动布局状态，暂停自动横向补位，避免自动逻辑把手动宽度撑回去。
-- `ha` 在 2U 及以上时，内容区右侧显示主备同步延迟的 SVG 水印：`aria-hidden`、`pointer-events-none`；静止为低透明度 stone，hover 时跟随 success 色。水印用 `ResizeObserver` 跟随 tile 实际内容宽度，缩回 1U 时立即卸载。
+- `ha` 在 2U 及以上时，内容区右侧显示单次心电心跳的 SVG 水印：`aria-hidden`、`pointer-events-none`；静止为低透明度 stone，hover 时跟随 success 色，事件期间跟随 error 色。水印用 `ResizeObserver` 跟随 tile 实际内容宽度，缩回 1U 时立即卸载。
 
 ### 5.4 纵向重排
 
@@ -266,7 +268,7 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
   - 执行已收录快捷键后显示组合与行为，1s 后隐藏；修饰键松开时若无锁定则立即隐藏。
   - 已收录文案：`Ctrl + K` / “搜索”，`Ctrl + S` / “切换左栏”，`Ctrl + E` / “切换右栏”。
   - Tab / Shift+Tab（以及方向键触发的焦点移动）把焦点送进可访问对象时，显示 `导航：<标识符>`，1s 后隐藏。标识符由当前 tile 标题和焦点控件组成；控件追加类型后缀，如“综合健康/刷新按钮”“搜索输入框”。
-  - 键盘焦点从页面移出、进入浏览器 UI 时显示 `导航：浏览器`；鼠标导致的失焦只隐藏提示。
+  - 键盘焦点从文档移出、进入浏览器 UI 时短暂显示 `导航：浏览器`；窗口失焦（页面 blur）时顶部指示立即移除，包括快捷键和导航提示。
 - 关闭按钮行显示 `Ctrl+S` / `Ctrl+E` 快捷键提示，提示放在同一 Motion opacity label 内，只在面板完全展开后显示。
 
 ## 8. 数据与图表
@@ -283,8 +285,8 @@ Dasher 是一个仅深色、高密度、零 gutter 的企业级路由器后台�
 - 接口状态：9 个 ETH；异常状态 warning dot，异常图标 hover 变 warning，离线图标 `opacity-30`。
 - 资源使用率：CPU 整数百分比；内存总量固定 4GB，显示一位小数；CPU/RAM 任一原始占用 ≥90% 进入 warning。
 - 连接总览：下联 AP 0、下联终端 1、连接数 72，纵向数字简报。
-- 高可用：success；双机热备状态、切换次数、上次同步和拓扑入口；2U+ 图表水印。
-- 严重事件：danger；事件数、BGP 标题、影响范围与持续时间。
+- 高可用：success；双机热备状态、切换次数、上次同步和拓扑入口；2U+ 单次心电心跳水印。加载 3s 后进入一次 danger 定时事件，显示“主备心跳中断 / 倒计时自动重试：5s→1s”；5s 后恢复，冷却 60s 后再次触发并循环，期间会计入右侧 error 数量。上次同步秒数在组件初始化时为 3s，随后每秒递增；每次严重事件倒计时结束视为 mock solve，秒数归零并重新计时。
+- 严重事件：danger；事件数、BGP 标题、影响范围与持续时间。tile 宽度至少 2U 时，右侧增加低透明度 error 色感叹号水印；内容层限宽 2U（`calc(660px - 2rem)`）并保持在上层，1U 时隐藏水印。
 - `#@preview` 预览模式：App 读取并监听 hash 中的 `@preview`，通过 `PreviewModeContext` 下发，同时把 telemetry 预填到 60 点历史后暂停。图表继续渲染，但数据固定在进入预览时的快照上，不再随时间更新。`ResourceUsageTile` 的 CPU/RAM 占用仍显示 `-`，并停用资源 warning 状态；高可用的静态 SVG 水印继续显示。
 - 其他未接数据的 tile 保持原型占位。
 

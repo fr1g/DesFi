@@ -169,6 +169,7 @@ export default function Home() {
 
     const haWidth = layout.find((item) => item.i === 'ha')?.w ?? 1
     const healthWidth = layout.find((item) => item.i === 'health')?.w ?? 1
+    const criticalWidth = layout.find((item) => item.i === 'critical')?.w ?? 1
 
     return (
         <div className={`min-h-screen w-full overflow-x-hidden ${editing ? 'is-editing' : ''} py-px`}>
@@ -234,7 +235,7 @@ export default function Home() {
                             <HighAvailabilityTile wide={haWidth >= 2} />
                         </div>
                         <div key="critical" id="dasher-critical" tabIndex={-1} className={SECTION_FOCUS}>
-                            <CriticalEventsTile />
+                            <CriticalEventsTile wide={criticalWidth >= 2} />
                         </div>
                     </GridLayout>
                 </TileMeasureContext.Provider>
