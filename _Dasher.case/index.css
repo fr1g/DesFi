@@ -1,0 +1,171 @@
+/*
+ * Dasher 案例主题：仅深色模式。
+ * 色 token 前缀 dsh-，值写具体色值（Tailwind 调色板），编辑器可直接预览。
+ * 允许的颜色：stone（除 50）、emerald-400、amber-400/500/600、red-400、
+ * olive/mist/mauve 400/500/600（图表备用线色），以及发丝线 white/10。
+ * 链接/链接式按钮：slate-500、slate-400、slate-500/80、mauve-700（visited，仅链接）。
+ * tile 边界：stone-600（1px outline）；焦点：stone-300/40 2px + offset；tile 内细线：white/10。
+ * 应用整体主背景只用 stone-900；stone-950 仅允许以低透明度遮罩/叠加出现。
+ */
+
+@theme static {
+    /* 表面 */
+    --color-dsh-surface-0: oklch(
+        21.6% 0.006 56.043
+    ); /* stone-900：应用主背景 */
+    --color-dsh-surface-1: oklch(
+        21.6% 0.006 56.043
+    ); /* stone-900：卡片与主背景同色，靠发丝线分隔 */
+    --color-dsh-surface-2: oklch(26.8% 0.007 34.298); /* stone-800 */
+
+    /* 文字：标题 100 / 正文 200 / 次要 300 / 禁用 500 */
+    --color-dsh-text-title: oklch(97% 0.001 106.424); /* stone-100 */
+    --color-dsh-text: oklch(92.3% 0.003 48.717); /* stone-200 */
+    --color-dsh-text-secondary: oklch(86.9% 0.005 56.366); /* stone-300 */
+    --color-dsh-text-disabled: oklch(55.3% 0.013 58.071); /* stone-500 */
+
+    /* 发丝线：等价于 border-white/10 */
+    --color-dsh-hairline: rgb(255 255 255 / 0.1); /* white/10 */
+
+    /* 遮罩：stone-950 的唯一允许形态（低透明度） */
+    --color-dsh-scrim: oklch(14.7% 0.004 49.25 / 0.5); /* stone-950/50 */
+
+    /* tile 边界：stone-600 */
+    --color-dsh-tile-outline: oklch(44.4% 0.011 73.639); /* stone-600 */
+
+    /* 强调与状态 */
+    --color-dsh-accent: oklch(76.9% 0.188 70.08); /* amber-500 */
+    --color-dsh-accent-strong: oklch(66.6% 0.179 58.318); /* amber-600 */
+    --color-dsh-success: oklch(76.5% 0.177 163.223); /* emerald-400 */
+    --color-dsh-warning: oklch(82.8% 0.189 84.429); /* amber-400 */
+    --color-dsh-error: oklch(70.4% 0.191 22.216); /* red-400 */
+
+    /* 图表备用线色 */
+    --color-dsh-series-olive-400: oklch(73.7% 0.021 106.9);
+    --color-dsh-series-olive-500: oklch(58% 0.031 107.3);
+    --color-dsh-series-olive-600: oklch(46.6% 0.025 107.3);
+    --color-dsh-series-mist-400: oklch(72.3% 0.014 214.4);
+    --color-dsh-series-mist-500: oklch(56% 0.021 213.5);
+    --color-dsh-series-mist-600: oklch(45% 0.017 213.2);
+    --color-dsh-series-mauve-400: oklch(71.1% 0.019 323.02);
+    --color-dsh-series-mauve-500: oklch(54.2% 0.034 322.5);
+    --color-dsh-series-mauve-600: oklch(43.5% 0.029 321.78);
+}
+
+.case-Dasher {
+    /* 案例永远是深色，不跟随 .dark 开关 */
+    @apply bg-dsh-surface-0 font-normal text-dsh-text scheme-dark;
+
+    /* 大背景：stone-200 / 5%，1px 线 / 8px 周期的 45 度细斜纹 */
+    background-image: repeating-linear-gradient(
+        45deg,
+        oklch(92.3% 0.003 48.717 / 0.05) 0,
+        oklch(92.3% 0.003 48.717 / 0.05) 1px,
+        transparent 1px,
+        transparent 8px
+    );
+
+    /* 原生刻度（字体、圆角、阴影等）可直接在作用域内覆盖 */
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+}
+
+/* 零 gutter 贴合格局的 tile 边界：相邻 1px outline 在接缝处重叠成 1px */
+.case-Dasher .dsh-tile {
+    @apply relative isolate cursor-default select-none;
+}
+
+/* 视觉层独立于内容层：编辑模式下整体内缩 8px（p-2），内容位置不变 */
+.case-Dasher .dsh-tile-frame {
+    @apply pointer-events-none absolute inset-0 -z-10 bg-stone-800 outline outline-1 outline-offset-[-0.5px] outline-dsh-tile-outline;
+}
+
+/* 编辑模式：所有 tile 恢复可抓取；视觉层由 Motion 统一内缩，块间隙固定为 16px */
+.case-Dasher .is-editing .dsh-tile {
+    @apply cursor-grab;
+}
+
+.case-Dasher .dsh-tile button {
+    @apply cursor-pointer;
+}
+
+/* 拖拽中的 item 抬到最上层，tile 用 surface-2 底 + 虚线 accent 边界明确表示“正在搬” */
+.case-Dasher .react-grid-item.react-draggable-dragging {
+    @apply z-20;
+}
+
+.case-Dasher .react-grid-item.react-draggable-dragging .dsh-tile {
+    @apply cursor-grabbing;
+}
+
+.case-Dasher .react-grid-item.react-draggable-dragging .dsh-tile-frame {
+    @apply bg-dsh-surface-2 outline-2 outline-dashed outline-offset-[-2px] outline-dsh-accent;
+}
+
+/* 焦点与边界形态区分：2px accent + 正 offset */
+.case-Dasher .dsh-tile:focus-visible {
+    @apply outline-2 outline-offset-2 outline-stone-300/40;
+}
+
+/* 聚焦的 RGL item 抬到相邻 tile 之上，避免外扩焦点环被覆盖 */
+.case-Dasher .react-grid-item:has(.dsh-tile:focus-visible) {
+    @apply z-10;
+}
+
+/* 有底部操作区的 tile：为按钮预留 H + 2rem */
+.case-Dasher .dsh-tile-actions {
+    @apply pb-[calc(var(--dsh-card-actions-height)_+_2rem)];
+}
+
+/* RGL 默认红色拖拽占位 / 黑色缩放手柄改用案例色板 */
+.case-Dasher .react-grid-item.react-grid-placeholder {
+    @apply bg-dsh-accent;
+}
+
+.case-Dasher .react-grid-item > .react-resizable-handle::after {
+    @apply border-dsh-text-disabled;
+}
+
+/* tile 内非全高的竖直分隔符：父容器为 flex row，默认 stretch */
+.case-Dasher .dsh-divider-v {
+    @apply my-[15px] w-px flex-none self-stretch bg-dsh-hairline;
+}
+
+/* 链接与链接式按钮：所有 <a> 自动应用；按钮加 .dsh-link-button */
+.case-Dasher a,
+.case-Dasher .dsh-link-button {
+    @apply cursor-pointer text-slate-500 underline;
+}
+
+.case-Dasher a:visited {
+    @apply text-mauve-700;
+}
+
+.case-Dasher a:hover,
+.case-Dasher .dsh-link-button:hover {
+    @apply text-slate-400;
+}
+
+.case-Dasher a:active,
+.case-Dasher .dsh-link-button:active {
+    @apply text-slate-500/80;
+}
+
+.case-Dasher .dsh-link-button {
+    @apply appearance-none border-0 bg-transparent p-0 font-[inherit];
+}
+
+/* 抽屉菜单是按钮式导航，不套用站内链接的 slate 色与下划线 */
+.case-Dasher .dsh-drawer-link,
+.case-Dasher .dsh-drawer-link:visited,
+.case-Dasher .dsh-drawer-link:hover,
+.case-Dasher .dsh-drawer-link:active {
+    @apply text-dsh-text-title no-underline;
+}
+
+@layer base {
+    .case-Dasher
+        :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+        @apply outline-2 outline-offset-2 outline-stone-300/40;
+    }
+}

@@ -22,18 +22,24 @@
 - 命令：`pnpm dev` / `pnpm build`（tsc -b + vite build）/ `pnpm lint`（oxlint）。改动后跑 build 和 lint。
 - 浏览器验证案例页时，在 URL hash 里加 `@preview`（如 `/Gazette#@preview`），避免案例的 AI 内容声明弹窗。
 
+## 依赖白名单与懒加载
+
+- 白名单是允许静态 `import` 的运行时直接依赖，目前为：`react`、`react-dom`、`react-router`、`motion`、`@headlessui/react`、`tdesign-icons-react`、`es-toolkit`。
+- 白名单之外的库（如 `react-grid-layout` v2、Dasher 图表用的 `uplot`）不得进入首屏 bundle：使用它的组件必须位于动态 `import()` 边界内（路由整体懒加载，或组件级 `React.lazy` + `Suspense`）；在该边界内组件可以正常静态 `import` 库本身。
+- 新增白名单库由用户决定，Agent 不要自行加入；安装新库时默认按非白名单处理。
+
 ## 目录与路由结构
 
-- `src/main.tsx`：挂载根路由，并注册字体缓存用的 Service Worker；不引入样式。
-- `src/Router.tsx`：根路由。BrowserRouter 包住 useRoutes；`/` 渲染首页 `src/Index.tsx`；展开 `src/cases.ts` 里的案例路由。全局样式入口 `src/index.css` 在这里引入。
+- `src/main.tsx`：挂载根路由，并注册站点缓存用的 Service Worker；不引入样式。
+- `src/Router.tsx`：根路由。BrowserRouter 包住 useRoutes（外层有 Suspense 边界，案例可用 React.lazy 整体懒加载）；`/` 渲染首页 `src/Index.tsx`；展开 `src/cases.ts` 里的案例路由。全局样式入口 `src/index.css` 在这里引入。
 - `src/Index.tsx`：首页框架。案例列表（来自 `src/cases.ts`）+ iframe 预览：hover 链接切换预览、点击跳转到案例页、iframe 按 bg-cover 方式铺满预览区并居中，加载中有淡入淡出遮盖（Motion）。
 - `src/cases.ts`：所有案例路由的汇总，根路由与首页预览共用；新增案例在这里登记。
 - `_shared/`：跨案例共享的代码（如 `lorem.ts` 的占位文本），不是设计案例，不需要在根路由注册。
-- `src/index.css`：全局 Tailwind 入口（tailwindcss 导入、dark 变体、语义色注册表、各案例样式 @import）。
-- 每个设计案例是根目录下的一个文件夹，文件夹名固定为 `_<案例名>.case` 格式（`<案例名>` 是整体占位符）：`_` 前缀让案例在文件管理器里排最前，`.case` 后缀与普通文件夹区分。**只有文件夹名用这个格式，文件夹内部的命名一律用案例名本身**——如案例 `example`：文件夹是 `_example.case`，内部是 `.case-example`、`/example`、`--color-example-*`。文件夹内固定四个文件：
+- `src/index.css`：全局 Tailwind 入口（tailwindcss 导入、dark 变体、既有语义色注册表、各案例样式 @import）。
+- 每个设计案例是根目录下的一个文件夹，文件夹名固定为 `_<案例名>.case` 格式（`<案例名>` 是整体占位符）：`_` 前缀让案例在文件管理器里排最前，`.case` 后缀与普通文件夹区分。**只有文件夹名用这个格式；文件夹内部的容器类、路由等用案例名本身**——如案例 `example`：文件夹是 `_example.case`，内部是 `.case-example`、`/example`。颜色 token 例外，用短前缀（Gazette → `gz`，如 `--color-gz-background`，见「主题隔离」）。文件夹内固定四个文件：
     - `App.tsx`：案例入口 / Layout。渲染导航栏、`<Outlet />`、页脚；导航与页脚由用户提供后插入。
     - `Router.ts`：案例自己的路由（导出 `RouteObject[]`）。顶层 `path` 为 `/<案例名>/*`（覆盖案例整个子树），`Component` 指向本案例的 `App`；案例内页面相对该前缀书写。
-    - `index.css`：案例主题与其他设计定义（带作用域，见下）。由全局入口 @import，App.tsx 不要再 import 它。
+    - `index.css`：案例主题与其他设计定义（色 token 与作用域写法见「主题隔离」）。由全局入口 @import，App.tsx 不要再 import 它。
     - `README.md`：案例说明，初始为空。
 
 ## 新建设计案例
@@ -41,18 +47,20 @@
 用户要求新建案例时会直接提供案例名（例如"复制 example 建一个 xxx 案例"），流程：
 
 1. 把 `_example.case/` 整体复制为 `_<新案例名>.case/`。
-2. 把新案例文件夹内部所有 `example` 字样替换为新案例名（容器类 `.case-example`、专属 token 前缀 `--color-example-*`、路由 path `/example`、注释等全部替换）；文件夹名保持 `_<新案例名>.case` 格式。
+2. 把新案例文件夹内部所有 `example` 字样替换为新案例名（容器类 `.case-example`、路由 path `/example`、注释等全部替换；颜色 token 除外）；案例色 token 改用新案例的短前缀（如 `--color-xx-*`，见「主题隔离」）；文件夹名保持 `_<新案例名>.case` 格式。
 3. 在 `src/cases.ts` 里导入并展开新案例的路由（path 为 `/<新案例名>/*`，指向新案例的 `App`）；根路由与首页预览会自动带上它。
 4. 补两处登记：`src/index.css` 里 @import 新案例的 index.css；`tsconfig.app.json` 的 include 加上 `_<新案例名>.case`。
 5. 跑 `pnpm build` 与 `pnpm lint` 确认无误。
 
 ## 主题隔离（Tailwind）
 
-思路：token 名字全局注册一次，值全部限定在案例作用域内，案例之间互不影响。
+思路：每个案例自带一套颜色 token，用案例缩写做前缀保证全站唯一；值直接写具体色值，Tailwind / 编辑器才能在定义处和补全里显示颜色本身（写成 `var(--...)` 间接引用就看不到色块）。
 
-- 语义色注册表在 `src/index.css` 的 `@theme inline`（background / foreground / primary / secondary / muted / accent / border / ring 及各自的 -foreground）。工具类直接引用 `var(--primary)` 这类变量，不向 `:root` 写值。需要新增语义色名时在注册表加一行。
-- 案例 `index.css` 把浅色值写在 `.case-<案例名>` 作用域里（容器类名见案例的 App.tsx，如 `.case-example`），深色值写在 `.dark .case-<案例名>` 下。
-- 案例专属 token 在案例 `index.css` 里用 `@theme` 注册，名字带 `<案例名>-` 前缀（如 `--color-example-highlight`），避免跨案例撞名；对应工具类如 `bg-example-highlight`。
+- 案例颜色 token 写在案例 `index.css` 的 `@theme` 里（需要让 JS/图表读取未被工具类引用的 token 时用 `@theme static`，仍是字面色值），名字带短前缀：如 Gazette 的 `--color-gz-background: rgb(243, 240, 233)`、`--color-gz-muted-foreground: #78716c`；对应工具类如 `bg-gz-background`、`text-gz-muted-foreground`。值必须是字面色值（hex / rgb / oklch），不要写成 `var(--...)`，也不要用 `@theme inline` 做间接注册。
+- 前缀取案例名的短缩写（Gazette → `gz`），全站唯一，两个案例不能共用；在案例 `index.css` 顶部注释里注明缩写对应的案例名。
+- 深浅色：浅色值写在 `@theme`；深色值在同文件的 `.dark .case-<案例名>` 下覆写同名 token（如 `--color-gz-background: ...`），工具类会自动跟随。
+- 案例 App 根节点保留 `.case-<案例名>` 容器类（如 `.case-Gazette`）：它是案例级 CSS 作用域与 JS 查询的锚点（如 `.case-Gazette img`、`.is-scrolled`）；新代码不再把主题色写在这里。
+- `src/index.css` 的 `@theme inline` 语义色注册表（background / foreground / primary 等）和 `.case-<案例名>` 里的 `--background` 一套是 example 模板的旧写法：保留兼容，不再扩展；新案例、新代码一律用上面的前缀 token。
 - Tailwind 原生刻度（`--font-*`、`--radius-*`、`--shadow-*` 等）可直接在案例作用域里覆盖，不用注册。
 - 深色模式：任意祖先节点加 `.dark` 类即可切换（通常放 `<html>`），已配好 dark 变体，工具类也可用 `dark:` 前缀。
 
@@ -68,7 +76,13 @@
 - 字体工具类在 `src/fonts.css` 的 `@theme` 注册（`--font-*` → `font-*`），全站可用：`font-lxgw-wenkai`、`font-lxgw-mono`（霞鹜文楷 / Mono）、`font-din`（D-DIN-PRO）、`font-oppo-sans`、`font-maple-mono`、`font-smiley-sans`（得意黑）、`font-jetbrains-mono`、`font-times`（Times New Roman / Tinos）。
 - 来源：霞鹜文楷（含 Mono）由 index.html 引入的 jsDelivr 样式表提供（分片 woff2）；D-DIN-PRO、OPPO Sans、得意黑、Maple Mono、JetBrains Mono 的 @font-face 在 `src/fonts.css`，走 jsDelivr CDN。Tinos（`font-times` 的主字体，latin 子集）自托管在 `public/fonts/tinos-*.woff2`，不走 CDN；`font-times` 的汉字由后面的宋体/系统衬线兜底。
 - 本地字体放 `public/fonts/`，@font-face 加在 `src/fonts.css`。
-- `public/sw.js`：只缓存字体文件（woff/woff2/ttf/otf/eot，或请求类型为 font），其他请求一律透传不缓存；新增字体不用改它。由 `src/registerFontServiceWorker.ts` 注册。
+
+## 缓存（Service Worker）
+
+- `public/sw.js` 由 `src/registerFontServiceWorker.ts` 在页面 load 后注册（函数名沿用旧名）。
+- 缓存范围：字体（woff/woff2/ttf/otf/eot 或请求类型为 font，含 CDN 字体）、与站点同源的图片、查询参数含 `force-sw-cache=true` 的 GET 请求；其他请求透传，不缓存。
+- 策略：cache-first；未命中时 fetch 并写入，opaque 的 no-cors 响应也按成功缓存。
+- 改动缓存范围或策略时同步提升文件顶部的 `CACHE_NAME` 版本号，activate 会清掉旧缓存。
 
 ## 代码风格
 

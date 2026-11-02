@@ -22,5 +22,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "_example.case", "_Gazette.case", "_shared"]
+  "include": ["src", "_example.case", "_Gazette.case", "_Dasher.case", "_shared"]
 }

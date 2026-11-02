@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_图层_1" data-name="图层 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 497.5 497">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-linejoin: bevel;
+        stroke-width: 39px;
+      }
+
+      .cls-1, .cls-2 {
+        fill: none;
+        stroke: #000;
+      }
+
+      .cls-2 {
+        stroke-dasharray: 40;
+        stroke-miterlimit: 10;
+        stroke-width: 205px;
+      }
+    </style>
+  </defs>
+  <path class="cls-1" d="M102.5,19.5h146c126.75,0,229.5,102.75,229.5,229.5h0c0,126.2-102.3,228.5-228.5,228.5H102.5"/>
+  <line class="cls-2" x1="102.5" y1="427.5" x2="102.5" y2="69.5"/>
+</svg>
