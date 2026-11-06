@@ -124,7 +124,10 @@ export default function HealthTile({ compact = false }: { compact?: boolean }) {
             </div>
 
             <div className="absolute inset-x-4 bottom-4 z-10 flex justify-end">
-                <button type="button" className="bg-stone-400/20 p-4 text-dsh-text">
+                <button
+                    type="button"
+                    className="bg-stone-400/20 p-4 text-dsh-text hover:bg-stone-400/30 active:bg-stone-400/40"
+                >
                     刷新
                 </button>
             </div>
